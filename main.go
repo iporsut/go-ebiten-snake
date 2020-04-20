@@ -3,9 +3,26 @@ package main
 import (
 	"image/color"
 	"log"
+	"math/rand"
+	"time"
 
 	"github.com/hajimehoshi/ebiten"
 )
+
+var rainbowPal = []color.RGBA{
+	{0xff, 0x00, 0x00, 0xff},
+	{0xff, 0x7f, 0x00, 0xff},
+	{0xff, 0xff, 0x00, 0xff},
+	{0x00, 0xff, 0x00, 0xff},
+	{0x00, 0x00, 0xff, 0xff},
+	{0x4b, 0x00, 0x82, 0xff},
+	{0x8f, 0x00, 0xff, 0xff},
+}
+
+func getRainbowColor() color.RGBA {
+	c := rainbowPal[rand.Intn(7)]
+	return c
+}
 
 type Game struct {
 	blocks    []*Block
@@ -40,7 +57,7 @@ func newBlock(x, y float64, d Direction) (*Block, error) {
 	if err != nil {
 		return nil, err
 	}
-	img.Fill(color.White)
+	img.Fill(getRainbowColor())
 	return &Block{
 		img: img,
 		x:   x,
@@ -203,6 +220,8 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	ebiten.SetWindowSize(320, 240)
 	ebiten.SetWindowTitle("Snake")
 	ebiten.SetMaxTPS(120)
