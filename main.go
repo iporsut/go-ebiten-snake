@@ -17,6 +17,7 @@ var rainbowPal = []color.RGBA{
 	{0x00, 0x00, 0xff, 0xff},
 	{0x4b, 0x00, 0x82, 0xff},
 	{0x8f, 0x00, 0xff, 0xff},
+	{0xff, 0xff, 0xff, 0xff},
 }
 
 var sameColorCounter = 0
@@ -24,7 +25,7 @@ var rainbowColorIndex = 0
 
 func getRainbowColor() color.RGBA {
 	if sameColorCounter == 0 {
-		rainbowColorIndex = rand.Intn(7)
+		rainbowColorIndex = rand.Intn(8)
 	}
 	sameColorCounter = (sameColorCounter + 1) % 10
 	return rainbowPal[rainbowColorIndex]
