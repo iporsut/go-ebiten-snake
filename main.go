@@ -19,9 +19,15 @@ var rainbowPal = []color.RGBA{
 	{0x8f, 0x00, 0xff, 0xff},
 }
 
+var sameColorCounter = 0
+var rainbowColorIndex = 0
+
 func getRainbowColor() color.RGBA {
-	c := rainbowPal[rand.Intn(7)]
-	return c
+	if sameColorCounter == 0 {
+		rainbowColorIndex = rand.Intn(7)
+	}
+	sameColorCounter = (sameColorCounter + 1) % 10
+	return rainbowPal[rainbowColorIndex]
 }
 
 type Game struct {
@@ -232,9 +238,8 @@ func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeigh
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	ebiten.SetWindowSize(320, 240)
+	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Snake")
-	ebiten.SetMaxTPS(120)
 	game := &Game{}
 	if err := game.Init(); err != nil {
 		log.Fatal(err)
