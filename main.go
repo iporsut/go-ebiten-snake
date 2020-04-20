@@ -67,7 +67,7 @@ func newBlock(x, y float64, d Direction) (*Block, error) {
 
 func initBlocks() ([]*Block, error) {
 	var blocks []*Block
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 200; i++ {
 		block, err := newBlock(float64(i), 0, Right)
 		if err != nil {
 			return nil, err
@@ -87,7 +87,7 @@ func (g *Game) Init() error {
 	return nil
 }
 
-func (g *Game) Update(screen *ebiten.Image) error {
+func (g *Game) updateDirection() error {
 	switch {
 	case ebiten.IsKeyPressed(ebiten.KeyDown) && g.direction != Up && g.direction != Down:
 		fb := g.blocks[len(g.blocks)-10]
@@ -162,7 +162,10 @@ func (g *Game) Update(screen *ebiten.Image) error {
 		}
 		g.direction = Left
 	}
+	return nil
+}
 
+func (g *Game) move() error {
 	switch g.direction {
 	case Right:
 		head := g.blocks[len(g.blocks)-1]
@@ -203,6 +206,13 @@ func (g *Game) Update(screen *ebiten.Image) error {
 		}
 	}
 	return nil
+}
+
+func (g *Game) Update(screen *ebiten.Image) error {
+	if err := g.updateDirection(); err != nil {
+		return err
+	}
+	return g.move()
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
