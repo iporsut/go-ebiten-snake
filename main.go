@@ -17,29 +17,32 @@ var rainbowPal = []color.RGBA{
 	{0x00, 0x00, 0xff, 0xff},
 	{0x4b, 0x00, 0x82, 0xff},
 	{0x8f, 0x00, 0xff, 0xff},
-	{0xff, 0xff, 0xff, 0xff},
 }
 
 var sameColorCounter = 0
 var rainbowColorIndex = 0
 
-func getRainbowColor() color.RGBA {
+func getRainbowColor() color.Color {
 	if sameColorCounter == 0 {
-		rainbowColorIndex = rand.Intn(8)
+		rainbowColorIndex = rand.Intn(len(rainbowPal))
 	}
 	sameColorCounter = (sameColorCounter + 1) % 10
 	return rainbowPal[rainbowColorIndex]
+	// return color.White
 }
 
 type Game struct {
 	blocks    []*Block
 	direction Direction
+	dot       *Block
 }
 
 type Block struct {
-	img *ebiten.Image
-	x   float64
-	y   float64
+	img    *ebiten.Image
+	x      float64
+	y      float64
+	width  int
+	height int
 }
 
 type Direction int
@@ -51,31 +54,80 @@ const (
 	Left
 )
 
-func newBlock(x, y float64, d Direction) (*Block, error) {
-	var img *ebiten.Image
-	var err error
-
-	if d == Right || d == Left {
-		img, err = ebiten.NewImage(1, 10, ebiten.FilterDefault)
-	} else if d == Up || d == Down {
-		img, err = ebiten.NewImage(10, 1, ebiten.FilterDefault)
-	}
-
+func newBlock(x, y float64, width, height int, color color.Color) (*Block, error) {
+	img, err := ebiten.NewImage(width, height, ebiten.FilterDefault)
 	if err != nil {
 		return nil, err
 	}
-	img.Fill(getRainbowColor())
+	img.Fill(color)
 	return &Block{
-		img: img,
-		x:   x,
-		y:   y,
+		img:    img,
+		x:      x,
+		y:      y,
+		width:  width,
+		height: height,
 	}, nil
+}
+
+func (g *Game) newRandomDot() error {
+	var x1, y1, x2, y2 int
+	conflict := true
+RandomXY:
+	for conflict {
+		x1 = rand.Intn(311)
+		y1 = rand.Intn(231)
+		x2 = x1 + 10
+		y2 = y1 + 10
+
+		for _, b := range g.blocks {
+			if x1 > (int(b.x)+b.width) || int(b.x) > x2 {
+				continue
+			}
+
+			if y1 > (int(b.y)+b.height) || int(b.y) > y2 {
+				continue
+			}
+
+			continue RandomXY
+		}
+		conflict = false
+	}
+
+	block, err := newBlock(float64(x1), float64(y1), 10, 10, getRainbowColor())
+	if err != nil {
+		return err
+	}
+	g.dot = block
+	return nil
+}
+
+func (g *Game) hitDot() bool {
+	head := g.blocks[len(g.blocks)-1]
+	hx1 := int(head.x)
+	hy1 := int(head.y)
+	hx2 := int(head.x) + head.width
+	hy2 := int(head.y) + head.height
+
+	dx1 := int(g.dot.x)
+	dy1 := int(g.dot.y)
+	dx2 := int(g.dot.x) + g.dot.width
+	dy2 := int(g.dot.y) + g.dot.height
+
+	if hx1 > dx2 || dx1 > hx2 {
+		return false
+	}
+
+	if hy1 > dy2 || dy1 > hy2 {
+		return false
+	}
+
+	return true
 }
 
 func initBlocks() ([]*Block, error) {
 	var blocks []*Block
 	for i := 0; i < 200; i++ {
-		block, err := newBlock(float64(i), 0, Right)
+		block, err := newBlock(float64(i), 0, 1, 10, getRainbowColor())
 		if err != nil {
 			return nil, err
 		}
@@ -91,6 +143,10 @@ func (g *Game) Init() error {
 	}
 	g.blocks = blocks
 	g.direction = Right
+	err = g.newRandomDot()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -106,7 +162,7 @@ func (g *Game) updateDirection() error {
 			x, y = fb.x, fb.y
 		}
 		for i := len(g.blocks) - 10; i < len(g.blocks); i++ {
-			block, err := newBlock(x, y, Down)
+			block, err := newBlock(x, y, 10, 1, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -124,7 +180,7 @@ func (g *Game) updateDirection() error {
 			x, y = fb.x, fb.y+9
 		}
 		for i := len(g.blocks) - 10; i < len(g.blocks); i++ {
-			block, err := newBlock(x, y, Up)
+			block, err := newBlock(x, y, 10, 1, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -142,7 +198,7 @@ func (g *Game) updateDirection() error {
 			x, y = fb.x, fb.y
 		}
 		for i := len(g.blocks) - 10; i < len(g.blocks); i++ {
-			block, err := newBlock(x, y, Right)
+			block, err := newBlock(x, y, 1, 10, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -160,7 +216,7 @@ func (g *Game) updateDirection() error {
 			x, y = fb.x+9, fb.y
 		}
 		for i := len(g.blocks) - 10; i < len(g.blocks); i++ {
-			block, err := newBlock(x, y, Left)
+			block, err := newBlock(x, y, 1, 10, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -177,7 +233,19 @@ func (g *Game) move() error {
 	case Right:
 		head := g.blocks[len(g.blocks)-1]
 		if head.x < 319 {
-			block, err := newBlock(head.x+1, head.y, Right)
+			if g.hitDot() {
+				if err := g.newRandomDot(); err != nil {
+					return err
+				}
+				block, err := newBlock(head.x+1, head.y, 1, 10, getRainbowColor())
+				if err != nil {
+					return err
+				}
+				g.blocks = append(g.blocks, block)
+				return nil
+			}
+
+			block, err := newBlock(head.x+1, head.y, 1, 10, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -186,7 +254,19 @@ func (g *Game) move() error {
 	case Down:
 		head := g.blocks[len(g.blocks)-1]
 		if head.y < 239 {
-			block, err := newBlock(head.x, head.y+1, Down)
+			if g.hitDot() {
+				if err := g.newRandomDot(); err != nil {
+					return err
+				}
+				block, err := newBlock(head.x, head.y+1, 10, 1, getRainbowColor())
+				if err != nil {
+					return err
+				}
+				g.blocks = append(g.blocks, block)
+				return nil
+			}
+
+			block, err := newBlock(head.x, head.y+1, 10, 1, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -195,7 +275,19 @@ func (g *Game) move() error {
 	case Left:
 		head := g.blocks[len(g.blocks)-1]
 		if head.x > 0 {
-			block, err := newBlock(head.x-1, head.y, Left)
+			if g.hitDot() {
+				if err := g.newRandomDot(); err != nil {
+					return err
+				}
+				block, err := newBlock(head.x-1, head.y, 1, 10, getRainbowColor())
+				if err != nil {
+					return err
+				}
+				g.blocks = append(g.blocks, block)
+				return nil
+			}
+
+			block, err := newBlock(head.x-1, head.y, 1, 10, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -204,8 +296,18 @@ func (g *Game) move() error {
 	case Up:
 		head := g.blocks[len(g.blocks)-1]
 		if head.y > 0 {
-
-			block, err := newBlock(head.x, head.y-1, Down)
+			if g.hitDot() {
+				if err := g.newRandomDot(); err != nil {
+					return err
+				}
+				block, err := newBlock(head.x, head.y-1, 10, 1, getRainbowColor())
+				if err != nil {
+					return err
+				}
+				g.blocks = append(g.blocks, block)
+				return nil
+			}
+			block, err := newBlock(head.x, head.y-1, 10, 1, getRainbowColor())
 			if err != nil {
 				return err
 			}
@@ -230,6 +332,14 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			GeoM: geom,
 		})
 	}
+	{
+		geom := ebiten.GeoM{}
+		geom.Translate(g.dot.x, g.dot.y)
+		screen.DrawImage(g.dot.img, &ebiten.DrawImageOptions{
+			GeoM: geom,
+		})
+	}
+
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
@@ -241,6 +351,7 @@ func main() {
 
 	ebiten.SetWindowSize(640, 480)
 	ebiten.SetWindowTitle("Snake")
+	ebiten.SetMaxTPS(120)
 	game := &Game{}
 	if err := game.Init(); err != nil {
 		log.Fatal(err)
