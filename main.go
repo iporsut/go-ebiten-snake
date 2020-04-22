@@ -228,90 +228,45 @@ func (g *Game) updateDirection() error {
 	return nil
 }
 
+func (g *Game) appendForwardBlock(x, y float64, width, height int) error {
+	block, err := newBlock(x, y, width, height, getRainbowColor())
+	if err != nil {
+		return err
+	}
+
+	if g.hitDot() {
+		if err := g.newRandomDot(); err != nil {
+			return err
+		}
+		g.blocks = append(g.blocks, block)
+	} else {
+		g.blocks = append(g.blocks[1:], block)
+	}
+
+	return nil
+}
+
 func (g *Game) move() error {
 	switch g.direction {
 	case Right:
 		head := g.blocks[len(g.blocks)-1]
 		if head.x < 319 {
-			if g.hitDot() {
-				if err := g.newRandomDot(); err != nil {
-					return err
-				}
-				block, err := newBlock(head.x+1, head.y, 1, 10, getRainbowColor())
-				if err != nil {
-					return err
-				}
-				g.blocks = append(g.blocks, block)
-				return nil
-			}
-
-			block, err := newBlock(head.x+1, head.y, 1, 10, getRainbowColor())
-			if err != nil {
-				return err
-			}
-			g.blocks = append(g.blocks[1:], block)
+			return g.appendForwardBlock(head.x+1, head.y, 1, 10)
 		}
 	case Down:
 		head := g.blocks[len(g.blocks)-1]
 		if head.y < 239 {
-			if g.hitDot() {
-				if err := g.newRandomDot(); err != nil {
-					return err
-				}
-				block, err := newBlock(head.x, head.y+1, 10, 1, getRainbowColor())
-				if err != nil {
-					return err
-				}
-				g.blocks = append(g.blocks, block)
-				return nil
-			}
-
-			block, err := newBlock(head.x, head.y+1, 10, 1, getRainbowColor())
-			if err != nil {
-				return err
-			}
-			g.blocks = append(g.blocks[1:], block)
+			return g.appendForwardBlock(head.x, head.y+1, 10, 1)
 		}
 	case Left:
 		head := g.blocks[len(g.blocks)-1]
 		if head.x > 0 {
-			if g.hitDot() {
-				if err := g.newRandomDot(); err != nil {
-					return err
-				}
-				block, err := newBlock(head.x-1, head.y, 1, 10, getRainbowColor())
-				if err != nil {
-					return err
-				}
-				g.blocks = append(g.blocks, block)
-				return nil
-			}
-
-			block, err := newBlock(head.x-1, head.y, 1, 10, getRainbowColor())
-			if err != nil {
-				return err
-			}
-			g.blocks = append(g.blocks[1:], block)
+			return g.appendForwardBlock(head.x-1, head.y, 1, 10)
 		}
 	case Up:
 		head := g.blocks[len(g.blocks)-1]
 		if head.y > 0 {
-			if g.hitDot() {
-				if err := g.newRandomDot(); err != nil {
-					return err
-				}
-				block, err := newBlock(head.x, head.y-1, 10, 1, getRainbowColor())
-				if err != nil {
-					return err
-				}
-				g.blocks = append(g.blocks, block)
-				return nil
-			}
-			block, err := newBlock(head.x, head.y-1, 10, 1, getRainbowColor())
-			if err != nil {
-				return err
-			}
-			g.blocks = append(g.blocks[1:], block)
+			return g.appendForwardBlock(head.x, head.y-1, 10, 1)
 		}
 	}
 	return nil
@@ -325,6 +280,7 @@ func (g *Game) Update(screen *ebiten.Image) error {
 }
 
 func (g *Game) Draw(screen *ebiten.Image) {
+	// Draw snake
 	for _, block := range g.blocks {
 		geom := ebiten.GeoM{}
 		geom.Translate(block.x, block.y)
@@ -332,14 +288,13 @@ func (g *Game) Draw(screen *ebiten.Image) {
 			GeoM: geom,
 		})
 	}
-	{
-		geom := ebiten.GeoM{}
-		geom.Translate(g.dot.x, g.dot.y)
-		screen.DrawImage(g.dot.img, &ebiten.DrawImageOptions{
-			GeoM: geom,
-		})
-	}
 
+	// Draw dot
+	geom := ebiten.GeoM{}
+	geom.Translate(g.dot.x, g.dot.y)
+	screen.DrawImage(g.dot.img, &ebiten.DrawImageOptions{
+		GeoM: geom,
+	})
 }
 
 func (g *Game) Layout(outsideWidth, outsideHeight int) (screenWidth, screenHeight int) {
