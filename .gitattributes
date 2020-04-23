@@ -1,0 +1,4 @@
+go-ebiten-snake.wasm linguist-detectable=false
+index.html linguist-detectable=false
+wasm_exec.js linguist-detectable=false
+
